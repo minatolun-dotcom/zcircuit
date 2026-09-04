@@ -7,6 +7,10 @@
   "engines": {
     "node": ">=20"
   },
+  "pnpm": {
+    "ignoredBuiltDependencies": ["core-js"],
+    "verifyDepsBeforeRun": false
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
@@ -20,6 +24,7 @@
   },
   "dependencies": {
     "@xyflow/react": "^12.11.6",
+    "jspdf": "^4.2.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "zustand": "^5.0.15"

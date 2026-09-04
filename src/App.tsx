@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { FlowCanvas } from './components/canvas/FlowCanvas';
 import { Palette } from './components/sidebar/Palette';
 import { PropertiesPanel } from './components/sidebar/PropertiesPanel';
+import { downloadJson, downloadPdf, downloadSvg } from './components/export/exportActions';
 import { SimulationToolbar } from './components/toolbar/SimulationToolbar';
 import { WaveformPanel } from './components/waveform/WaveformPanel';
 import { useLiveAnalyses } from './store/analyses';
@@ -102,6 +103,10 @@ export default function App() {
           <ToolButton label="New" title="Clear the canvas (new circuit)" onClick={newCircuit} testId="new-btn" />
           <ToolButton label="Save" title="Save circuit to this browser" onClick={saveCircuit} testId="save-btn" />
           <ToolButton label="Open" title="Load the saved circuit" onClick={loadCircuit} testId="open-btn" />
+          <Divider />
+          <ToolButton label="JSON" title="Export the circuit + results as JSON" onClick={downloadJson} testId="export-json-btn" />
+          <ToolButton label="SVG" title="Export the wiring diagram as SVG" onClick={downloadSvg} testId="export-svg-btn" />
+          <ToolButton label="PDF" title="Generate the wiring docket PDF" onClick={() => void downloadPdf()} testId="export-pdf-btn" />
           <Divider />
           <ToolButton
             label={theme === 'dark' ? '☀' : '☾'}
