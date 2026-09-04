@@ -16,6 +16,9 @@ import type {
 } from '../types/circuit';
 import { terminalFromHandle } from '../types/circuit';
 import { uid } from '../utils/uid';
+import type { OptimizationReport } from '../engine/optimization';
+import type { SimulationResult } from '../engine/simulation';
+import type { ValidationReport } from '../engine/validation';
 import { parseCircuitDoc, serializeCircuit, STORAGE_KEY } from './serialization';
 
 const HISTORY_LIMIT = 50;
@@ -38,6 +41,15 @@ interface CircuitState {
   // Simulation state (consumed by the engine from Wave 3 onwards) -------
   simulationRunning: boolean;
   simulationSpeed: number;
+
+  // Live analysis results (recomputed by useLiveAnalyses, never mutated by
+  // the engines themselves) ----------------------------------------------
+  simResult: SimulationResult | null;
+  validation: ValidationReport | null;
+  optimization: OptimizationReport | null;
+  validationEnabled: boolean;
+  optimizationEnabled: boolean;
+  gridVisible: boolean;
 
   addComponent: (type: ComponentType, position: { x: number; y: number }) => string;
   onNodesChange: (changes: NodeChange<ComponentNode>[]) => void;
@@ -65,6 +77,12 @@ interface CircuitState {
   setSimulationRunning: (running: boolean) => void;
   setSimulationSpeed: (speed: number) => void;
 
+  toggleValidation: () => void;
+  toggleOptimization: () => void;
+  toggleGrid: () => void;
+  /** Select exactly one component (clears wire + other node selection). */
+  selectNode: (nodeId: string | null) => void;
+
   setNotice: (message: string | null) => void;
 }
 
@@ -86,6 +104,12 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
   future: [],
   simulationRunning: false,
   simulationSpeed: 1,
+  simResult: null,
+  validation: null,
+  optimization: null,
+  validationEnabled: false,
+  optimizationEnabled: false,
+  gridVisible: true,
 
   setNotice: (message) => {
     if (noticeTimer) clearTimeout(noticeTimer);
@@ -237,7 +261,17 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
   },
 
   newCircuit: () => {
-    set({ nodes: [], edges: [], past: [], future: [], notice: null });
+    set({
+      nodes: [],
+      edges: [],
+      past: [],
+      future: [],
+      notice: null,
+      simulationRunning: false,
+      simResult: null,
+      validation: null,
+      optimization: null,
+    });
     get().setNotice('New circuit started.');
   },
 
@@ -268,6 +302,9 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
       past: [],
       future: [],
       simulationRunning: false,
+      simResult: null,
+      validation: null,
+      optimization: null,
       notice: null,
     });
     get().setNotice('Saved circuit loaded.');
@@ -276,4 +313,13 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
   setSimulationRunning: (running) => set({ simulationRunning: running }),
   setSimulationSpeed: (speed) =>
     set({ simulationSpeed: Math.min(8, Math.max(0.1, speed)) }),
+
+  toggleValidation: () => set((s) => ({ validationEnabled: !s.validationEnabled })),
+  toggleOptimization: () => set((s) => ({ optimizationEnabled: !s.optimizationEnabled })),
+  toggleGrid: () => set((s) => ({ gridVisible: !s.gridVisible })),
+  selectNode: (nodeId) =>
+    set((s) => ({
+      nodes: s.nodes.map((n) => ({ ...n, selected: n.id === nodeId })),
+      edges: s.edges.map((e) => ({ ...e, selected: false })),
+    })),
 }));

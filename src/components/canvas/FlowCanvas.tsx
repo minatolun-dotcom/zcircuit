@@ -17,6 +17,7 @@ import { CATALOG } from '../library/catalog';
 import { PALETTE_MIME, type PalettePayload } from '../../types/circuit';
 import { WireEdge } from '../edges/WireEdge';
 import { ComponentNode } from '../nodes/ComponentNode';
+import { AnalysisRail } from '../panels/AnalysisRail';
 
 // xyflow's NodeTypes/EdgeTypes are typed against the untyped base node/edge;
 // our nodes/edges carry strict domain data, so the registry entries are cast.
@@ -31,6 +32,7 @@ function Canvas() {
   const onConnect = useCircuitStore((s) => s.connect);
   const addComponent = useCircuitStore((s) => s.addComponent);
   const recordDrag = useCircuitStore((s) => s.recordDrag);
+  const gridVisible = useCircuitStore((s) => s.gridVisible);
   const { screenToFlowPosition } = useReactFlow();
   const [dragOver, setDragOver] = useState(false);
 
@@ -110,7 +112,7 @@ function Canvas() {
         proOptions={{ hideAttribution: true }}
         className={dragOver ? 'bg-sky-50 dark:bg-slate-800/60' : ''}
       >
-        <Background variant={BackgroundVariant.Lines} gap={16} size={1} />
+        {gridVisible && <Background variant={BackgroundVariant.Lines} gap={16} size={1} />}
         <Controls />
         <MiniMap pannable zoomable nodeColor="#475569" maskColor="rgba(100, 116, 139, 0.2)" />
         {nodes.length === 0 && (
@@ -122,6 +124,7 @@ function Canvas() {
           </div>
         )}
       </ReactFlow>
+      <AnalysisRail />
     </div>
   );
 }

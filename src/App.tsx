@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { FlowCanvas } from './components/canvas/FlowCanvas';
 import { Palette } from './components/sidebar/Palette';
 import { PropertiesPanel } from './components/sidebar/PropertiesPanel';
+import { SimulationToolbar } from './components/toolbar/SimulationToolbar';
+import { useLiveAnalyses } from './store/analyses';
 import { useCircuitStore } from './store/circuitStore';
 
 const THEME_KEY = 'zcircuit.theme';
@@ -63,9 +65,10 @@ export default function App() {
   const saveCircuit = useCircuitStore((s) => s.saveCircuit);
   const loadCircuit = useCircuitStore((s) => s.loadCircuit);
   const [theme, toggleTheme] = useTheme();
+  useLiveAnalyses();
 
   return (
-    <div className="flex h-screen flex-col bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="relative flex h-screen flex-col bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <header
         className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900"
         data-testid="app-header"
@@ -109,8 +112,11 @@ export default function App() {
 
       <div className="flex min-h-0 flex-1">
         <Palette />
-        <main className="min-w-0 flex-1 bg-slate-200/70 dark:bg-slate-900">
-          <FlowCanvas />
+        <main className="flex min-w-0 flex-1 flex-col bg-slate-200/70 dark:bg-slate-900">
+          <div className="min-h-0 flex-1">
+            <FlowCanvas />
+          </div>
+          <SimulationToolbar />
         </main>
         <PropertiesPanel />
       </div>
@@ -118,7 +124,7 @@ export default function App() {
       {notice && (
         <div
           data-testid="notice"
-          className="pointer-events-none absolute bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 shadow dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200"
+          className="pointer-events-none absolute bottom-16 left-1/2 z-50 -translate-x-1/2 rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 shadow dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200"
         >
           {notice}
         </div>

@@ -11,6 +11,12 @@ function reset() {
     future: [],
     simulationRunning: false,
     simulationSpeed: 1,
+    simResult: null,
+    validation: null,
+    optimization: null,
+    validationEnabled: false,
+    optimizationEnabled: false,
+    gridVisible: true,
   });
 }
 
@@ -203,6 +209,42 @@ describe('serialization', () => {
       expect(parsed.nodes).toHaveLength(1);
       expect(parsed.edges).toHaveLength(0);
     }
+  });
+});
+
+describe('analysis toggles & programmatic selection', () => {
+  it('toggles validation, optimization and grid visibility', () => {
+    const { toggleValidation, toggleOptimization, toggleGrid } = useCircuitStore.getState();
+    expect(useCircuitStore.getState().validationEnabled).toBe(false);
+    toggleValidation();
+    expect(useCircuitStore.getState().validationEnabled).toBe(true);
+    toggleValidation();
+    expect(useCircuitStore.getState().validationEnabled).toBe(false);
+
+    toggleOptimization();
+    expect(useCircuitStore.getState().optimizationEnabled).toBe(true);
+
+    expect(useCircuitStore.getState().gridVisible).toBe(true);
+    toggleGrid();
+    expect(useCircuitStore.getState().gridVisible).toBe(false);
+  });
+
+  it('selectNode selects exactly one node and clears wire selection', () => {
+    const { addComponent, connect, selectNode } = useCircuitStore.getState();
+    const a = addComponent('mcb', { x: 0, y: 0 });
+    const b = addComponent('bulb', { x: 300, y: 0 });
+    connect({ source: a, target: b, sourceHandle: 'l-out::src', targetHandle: 'l-in::tgt' });
+    const edgeId = useCircuitStore.getState().edges[0].id;
+    useCircuitStore.getState().selectEdge(edgeId, true);
+
+    selectNode(a);
+    const s = useCircuitStore.getState();
+    expect(s.nodes.find((n) => n.id === a)?.selected).toBe(true);
+    expect(s.nodes.find((n) => n.id === b)?.selected).toBe(false);
+    expect(s.edges[0].selected).toBe(false);
+
+    selectNode(null);
+    expect(useCircuitStore.getState().nodes.every((n) => !n.selected)).toBe(true);
   });
 });
 
