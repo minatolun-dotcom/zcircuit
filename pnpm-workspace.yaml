@@ -1,0 +1,5 @@
+# Build-approval policy for dependency lifecycle scripts (pnpm 11).
+# core-js ships prebuilt dist files, so its postinstall build is deliberately
+# not approved - matching the ignoredBuiltDependencies entry in package.json.
+allowBuilds:
+  core-js: false
