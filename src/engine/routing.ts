@@ -10,14 +10,19 @@ export interface Rect {
   height: number;
 }
 
-/** Routing grid cell size in px. */
-export const GRID = 8;
+/** Routing grid cell size in px. Matches the visible canvas grid (16px) so
+ *  wires run along the grid lines the user sees. */
+export const GRID = 16;
 
 /** Extra clearance kept around obstacles (per side). */
 export const WIRE_MARGIN = 6;
 
-/** Cells of padding left above the start anchor so routes have room to detour. */
+/** Cells of padding around the route area so detours have room. */
 const PAD_CELLS = 2;
+
+function rectsOverlap(a: Rect, b: Rect): boolean {
+  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+}
 
 function fmt(v: number): number {
   return Math.round(v * 2) / 2;
@@ -30,10 +35,6 @@ export function inflateRect(rect: Rect, margin: number): Rect {
     width: rect.width + margin * 2,
     height: rect.height + margin * 2,
   };
-}
-
-function rectContainsPoint(rect: Rect, x: number, y: number): boolean {
-  return x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height;
 }
 
 interface Grid {
@@ -53,26 +54,32 @@ function isBlocked(grid: Grid, c: number, r: number): boolean {
 }
 
 /**
- * The grid origin is anchored so that a grid line runs exactly through the
- * start anchor (start.x - 4 is the first cell centre column, cell index
- * PAD_CELLS). This keeps the wire flat at the terminal instead of snapping to
- * an unrelated 8px lattice.
+ * The grid origin sits at -GRID/2 so cell centres land exactly on the world
+ * grid lines (multiples of GRID from 0,0) - the same lattice the background
+ * grid draws. A cell is blocked when it overlaps an inflated obstacle, so a
+ * 16px cell cannot cut a corner through an obstacle.
  */
 function buildGrid(start: Pt, end: Pt, obstacles: Rect[]): Grid {
-  const ox = start.x - GRID / 2 - PAD_CELLS * GRID;
-  const oy = start.y - GRID / 2 - PAD_CELLS * GRID;
+  const ox = -GRID / 2;
+  const oy = -GRID / 2;
 
-  const maxX = Math.max(start.x, end.x, ...obstacles.map((o) => o.x + o.width));
-  const maxY = Math.max(start.y, end.y, ...obstacles.map((o) => o.y + o.height));
+  const xs = [start.x, end.x, ...obstacles.map((o) => o.x), ...obstacles.map((o) => o.x + o.width)];
+  const ys = [start.y, end.y, ...obstacles.map((o) => o.y), ...obstacles.map((o) => o.y + o.height)];
+  const maxX = Math.max(...xs);
+  const maxY = Math.max(...ys);
   const cols = Math.ceil((maxX - ox) / GRID) + PAD_CELLS + 1;
   const rows = Math.ceil((maxY - oy) / GRID) + PAD_CELLS + 1;
 
   const blocked = new Uint8Array(cols * rows);
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      const cx = ox + c * GRID + GRID / 2;
-      const cy = oy + r * GRID + GRID / 2;
-      if (obstacles.some((o) => rectContainsPoint(o, cx, cy))) {
+      const cell: Rect = {
+        x: ox + c * GRID,
+        y: oy + r * GRID,
+        width: GRID,
+        height: GRID,
+      };
+      if (obstacles.some((o) => rectsOverlap(o, cell))) {
         blocked[r * cols + c] = 1;
       }
     }
@@ -80,7 +87,7 @@ function buildGrid(start: Pt, end: Pt, obstacles: Rect[]): Grid {
   return { cols, rows, ox, oy, blocked };
 }
 
-/** Map a world point to its cell index (cells are [origin + 8k, origin + 8(k+1))). */
+/** Map a world point to its cell index (cells are [origin + 16k, origin + 16(k+1))). */
 function toCell(grid: Grid, p: Pt): [number, number] {
   const c = Math.floor((p.x - grid.ox) / GRID);
   const r = Math.floor((p.y - grid.oy) / GRID);

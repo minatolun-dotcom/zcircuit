@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* Class-based dark mode (toggled by adding `.dark` to <html>). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 html,
 body,
 #root {
@@ -17,13 +20,83 @@ body {
     'Helvetica Neue',
     Arial,
     sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Keep the canvas background neutral so wires stay readable. */
+/* ---------------------------------------------------------------------------
+ * React Flow theming
+ * ------------------------------------------------------------------------- */
+
 .react-flow__attribution {
   display: none;
 }
 
 .react-flow__edge-interaction {
   cursor: pointer;
+}
+
+/* Light theme canvas defaults */
+.react-flow__background path {
+  stroke: #cbd5e1;
+}
+
+.react-flow__controls {
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+}
+
+.react-flow__controls-button {
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.react-flow__controls-button:hover {
+  background: #f1f5f9;
+}
+
+.react-flow__controls-button svg {
+  fill: #334155;
+}
+
+.react-flow__minimap {
+  background: #fff;
+}
+
+/* Dark theme canvas overrides (html.dark). */
+.dark .react-flow__background path {
+  stroke: #334155;
+}
+
+.dark .react-flow__controls {
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.5);
+}
+
+.dark .react-flow__controls-button {
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+}
+
+.dark .react-flow__controls-button:hover {
+  background: #334155;
+}
+
+.dark .react-flow__controls-button svg {
+  fill: #cbd5e1;
+}
+
+.dark .react-flow__minimap {
+  background: #0f172a;
+}
+
+.dark .react-flow__minimap-mask {
+  fill: rgb(15 23 42 / 0.55);
+}
+
+/* Minimal scrollbars inside panels (keeps dark sidebars tidy). */
+.panel-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.panel-scroll::-webkit-scrollbar-thumb {
+  background: rgb(100 116 139 / 0.5);
+  border-radius: 8px;
 }

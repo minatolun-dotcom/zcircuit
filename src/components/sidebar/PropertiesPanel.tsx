@@ -5,6 +5,9 @@ import { CATALOG } from '../library/catalog';
 const MCB_RATINGS = [6, 10, 16, 20, 32];
 const INVERTER_SIZES = [500, 1000, 2000, 3000];
 
+const inputCls =
+  'w-full rounded border border-slate-300 bg-white px-1.5 py-0.5 text-xs text-slate-800 outline-none focus:border-sky-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-sky-400';
+
 function NumberField({
   label,
   unit,
@@ -18,15 +21,15 @@ function NumberField({
 }) {
   return (
     <label className="block">
-      <span className="mb-0.5 block text-[11px] font-medium text-slate-500">{label}</span>
+      <span className="mb-0.5 block text-[11px] font-medium text-slate-500 dark:text-slate-400">{label}</span>
       <div className="flex items-center gap-1">
         <input
           type="number"
           value={value ?? ''}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="w-full rounded border border-slate-300 px-1.5 py-0.5 text-xs outline-none focus:border-sky-400"
+          className={inputCls}
         />
-        {unit && <span className="text-[10px] text-slate-400">{unit}</span>}
+        {unit && <span className="text-[10px] text-slate-400 dark:text-slate-500">{unit}</span>}
       </div>
     </label>
   );
@@ -47,7 +50,7 @@ function ToggleField({
 }) {
   return (
     <div>
-      <span className="mb-0.5 block text-[11px] font-medium text-slate-500">{label}</span>
+      <span className="mb-0.5 block text-[11px] font-medium text-slate-500 dark:text-slate-400">{label}</span>
       <div className="grid grid-cols-2 gap-1" role="group">
         {(['on', 'off'] as const).map((state) => (
           <button
@@ -57,8 +60,8 @@ function ToggleField({
             onClick={() => onChange(state)}
             className={`rounded border px-1 py-0.5 text-[11px] ${
               value === state
-                ? 'border-sky-400 bg-sky-50 font-semibold text-sky-700'
-                : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+                ? 'border-sky-400 bg-sky-50 font-semibold text-sky-700 dark:bg-sky-900/40 dark:text-sky-300'
+                : 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800'
             }`}
           >
             {state === 'on' ? onLabel : offLabel}
@@ -74,11 +77,13 @@ function fieldsFor(type: ComponentType, props: ComponentProps, onChange: (p: Com
     case 'mcb':
       return (
         <label className="block">
-          <span className="mb-0.5 block text-[11px] font-medium text-slate-500">Rated current</span>
+          <span className="mb-0.5 block text-[11px] font-medium text-slate-500 dark:text-slate-400">
+            Rated current
+          </span>
           <select
             value={props.ratedCurrentA ?? 16}
             onChange={(e) => onChange({ ratedCurrentA: Number(e.target.value) })}
-            className="w-full rounded border border-slate-300 px-1.5 py-0.5 text-xs outline-none focus:border-sky-400"
+            className={inputCls}
           >
             {MCB_RATINGS.map((a) => (
               <option key={a} value={a}>
@@ -111,11 +116,13 @@ function fieldsFor(type: ComponentType, props: ComponentProps, onChange: (p: Com
     case 'inverter':
       return (
         <label className="block">
-          <span className="mb-0.5 block text-[11px] font-medium text-slate-500">Capacity</span>
+          <span className="mb-0.5 block text-[11px] font-medium text-slate-500 dark:text-slate-400">
+            Capacity
+          </span>
           <select
             value={props.capacityVA ?? 1000}
             onChange={(e) => onChange({ capacityVA: Number(e.target.value) })}
-            className="w-full rounded border border-slate-300 px-1.5 py-0.5 text-xs outline-none focus:border-sky-400"
+            className={inputCls}
           >
             {INVERTER_SIZES.map((va) => (
               <option key={va} value={va}>
@@ -146,11 +153,16 @@ export function PropertiesPanel() {
 
   if (selected.length === 0) {
     return (
-      <aside className="flex w-64 shrink-0 flex-col border-l border-slate-200 bg-white" data-testid="properties-panel">
-        <div className="border-b border-slate-200 px-3 py-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Properties</h2>
+      <aside
+        className="flex w-64 shrink-0 flex-col border-l border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+        data-testid="properties-panel"
+      >
+        <div className="border-b border-slate-200 px-3 py-2 dark:border-slate-800">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Properties
+          </h2>
         </div>
-        <p className="px-3 py-3 text-[11px] leading-relaxed text-slate-400">
+        <p className="px-3 py-3 text-[11px] leading-relaxed text-slate-400 dark:text-slate-500">
           Select a component on the canvas to view and edit its properties.
         </p>
       </aside>
@@ -163,38 +175,44 @@ export function PropertiesPanel() {
   const change = (patch: ComponentProps) => updateProps(node.id, patch);
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col overflow-y-auto border-l border-slate-200 bg-white" data-testid="properties-panel">
-      <div className="border-b border-slate-200 px-3 py-2">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Properties</h2>
+    <aside
+      className="panel-scroll flex w-64 shrink-0 flex-col overflow-y-auto border-l border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+      data-testid="properties-panel"
+    >
+      <div className="border-b border-slate-200 px-3 py-2 dark:border-slate-800">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          Properties
+        </h2>
       </div>
       <div className="space-y-3 px-3 py-3">
         <div>
           <h3 className="text-sm font-semibold">{meta.label}</h3>
-          <p className="text-[11px] text-slate-400">{meta.blurb}</p>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500">{meta.blurb}</p>
         </div>
         <label className="block">
-          <span className="mb-0.5 block text-[11px] font-medium text-slate-500">Name</span>
+          <span className="mb-0.5 block text-[11px] font-medium text-slate-500 dark:text-slate-400">
+            Name
+          </span>
           <input
             type="text"
             value={props.name ?? ''}
             placeholder={meta.label}
             onChange={(e) => change({ name: e.target.value })}
-            className="w-full rounded border border-slate-300 px-1.5 py-0.5 text-xs outline-none focus:border-sky-400"
+            className={inputCls}
           />
         </label>
         <NumberField label="Voltage" unit="V" value={props.voltageV} onChange={(voltageV) => change({ voltageV })} />
         {fieldsFor(meta.type, props, change)}
         <div>
-          <span className="mb-1 block text-[11px] font-medium text-slate-500">Terminals</span>
+          <span className="mb-1 block text-[11px] font-medium text-slate-500 dark:text-slate-400">
+            Terminals
+          </span>
           <ul className="space-y-1">
             {meta.terminals.map((t) => (
-              <li key={t.id} className="flex items-center gap-2 text-[11px] text-slate-600">
-                <span
-                  className="inline-block h-2.5 w-2.5 rounded-full"
-                  style={{ background: ROLE_COLOR[t.role] }}
-                />
+              <li key={t.id} className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-300">
+                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: ROLE_COLOR[t.role] }} />
                 <span className="font-medium">{t.label}</span>
-                <span className="text-slate-400">
+                <span className="text-slate-400 dark:text-slate-500">
                   {t.role} · {t.kind}
                 </span>
               </li>

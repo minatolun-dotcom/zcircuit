@@ -1,8 +1,12 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import type { ComponentNode } from '../../types/circuit';
+import type { ComponentNode, TerminalRole } from '../../types/circuit';
 import { ROLE_COLOR, SRC_SUFFIX } from '../../types/circuit';
 import { CATALOG } from '../library/catalog';
 import { SymbolView } from '../library/symbols';
+
+function roleChar(role: TerminalRole): string {
+  return role === 'PE' ? 'E' : role;
+}
 
 function handleStyle(y: number, x: number) {
   return {
@@ -56,16 +60,33 @@ export function ComponentNode({ id, data, selected }: NodeProps<ComponentNode>) 
             background: ROLE_COLOR[t.role],
           };
           return (
-            <Handle
-              key={t.id}
-              id={`${t.id}${SRC_SUFFIX}`}
-              type="source"
-              position={side}
-              style={style}
-              isConnectableStart
-              isConnectableEnd
-              title={`${t.label} (${t.role})`}
-            />
+            <div key={t.id}>
+              <Handle
+                id={`${t.id}${SRC_SUFFIX}`}
+                type="source"
+                position={side}
+                style={style}
+                isConnectableStart
+                isConnectableEnd
+                title={`${t.label} (${t.role})`}
+              />
+              {/* Role letter chip so the connection points are unmistakable */}
+              <span
+                data-testid="terminal-chip"
+                className="pointer-events-none absolute flex select-none items-center justify-center rounded-full font-bold text-white"
+                style={{
+                  left: t.x === 0 ? t.x + 7 : meta.width - 16,
+                  top: t.y - 5,
+                  width: 10,
+                  height: 10,
+                  background: ROLE_COLOR[t.role],
+                  fontSize: 7,
+                  lineHeight: '10px',
+                }}
+              >
+                {roleChar(t.role)}
+              </span>
+            </div>
           );
         })}
       </div>
