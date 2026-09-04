@@ -50,6 +50,8 @@ interface CircuitState {
   validationEnabled: boolean;
   optimizationEnabled: boolean;
   gridVisible: boolean;
+  /** Oscilloscope drawer (Todo 9) - visible when running. */
+  waveformOpen: boolean;
 
   addComponent: (type: ComponentType, position: { x: number; y: number }) => string;
   onNodesChange: (changes: NodeChange<ComponentNode>[]) => void;
@@ -80,6 +82,7 @@ interface CircuitState {
   toggleValidation: () => void;
   toggleOptimization: () => void;
   toggleGrid: () => void;
+  toggleWaveform: () => void;
   /** Select exactly one component (clears wire + other node selection). */
   selectNode: (nodeId: string | null) => void;
 
@@ -110,6 +113,7 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
   validationEnabled: false,
   optimizationEnabled: false,
   gridVisible: true,
+  waveformOpen: false,
 
   setNotice: (message) => {
     if (noticeTimer) clearTimeout(noticeTimer);
@@ -317,6 +321,7 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
   toggleValidation: () => set((s) => ({ validationEnabled: !s.validationEnabled })),
   toggleOptimization: () => set((s) => ({ optimizationEnabled: !s.optimizationEnabled })),
   toggleGrid: () => set((s) => ({ gridVisible: !s.gridVisible })),
+  toggleWaveform: () => set((s) => ({ waveformOpen: !s.waveformOpen })),
   selectNode: (nodeId) =>
     set((s) => ({
       nodes: s.nodes.map((n) => ({ ...n, selected: n.id === nodeId })),

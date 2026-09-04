@@ -17,6 +17,7 @@ function reset() {
     validationEnabled: false,
     optimizationEnabled: false,
     gridVisible: true,
+    waveformOpen: false,
   });
 }
 

@@ -3,6 +3,7 @@ import { FlowCanvas } from './components/canvas/FlowCanvas';
 import { Palette } from './components/sidebar/Palette';
 import { PropertiesPanel } from './components/sidebar/PropertiesPanel';
 import { SimulationToolbar } from './components/toolbar/SimulationToolbar';
+import { WaveformPanel } from './components/waveform/WaveformPanel';
 import { useLiveAnalyses } from './store/analyses';
 import { useCircuitStore } from './store/circuitStore';
 
@@ -64,6 +65,7 @@ export default function App() {
   const newCircuit = useCircuitStore((s) => s.newCircuit);
   const saveCircuit = useCircuitStore((s) => s.saveCircuit);
   const loadCircuit = useCircuitStore((s) => s.loadCircuit);
+  const waveformOpen = useCircuitStore((s) => s.waveformOpen);
   const [theme, toggleTheme] = useTheme();
   useLiveAnalyses();
 
@@ -116,6 +118,7 @@ export default function App() {
           <div className="min-h-0 flex-1">
             <FlowCanvas />
           </div>
+          {waveformOpen && <WaveformPanel />}
           <SimulationToolbar />
         </main>
         <PropertiesPanel />

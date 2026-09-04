@@ -33,9 +33,11 @@ export function SimulationToolbar() {
   const validationEnabled = useCircuitStore((s) => s.validationEnabled);
   const optimizationEnabled = useCircuitStore((s) => s.optimizationEnabled);
   const gridVisible = useCircuitStore((s) => s.gridVisible);
+  const waveformOpen = useCircuitStore((s) => s.waveformOpen);
   const toggleValidation = useCircuitStore((s) => s.toggleValidation);
   const toggleOptimization = useCircuitStore((s) => s.toggleOptimization);
   const toggleGrid = useCircuitStore((s) => s.toggleGrid);
+  const toggleWaveform = useCircuitStore((s) => s.toggleWaveform);
   const simMessage = useCircuitStore((s) => s.simResult?.message ?? null);
   const validationErrors = useCircuitStore(
     (s) => s.validation?.counts.error ?? 0,
@@ -127,6 +129,15 @@ export function SimulationToolbar() {
           className={toggleCls(gridVisible)}
         >
           Grid
+        </button>
+        <button
+          type="button"
+          data-testid="waveform-toggle"
+          onClick={toggleWaveform}
+          title="Show the oscilloscope waveform drawer"
+          className={toggleCls(waveformOpen)}
+        >
+          Scope
         </button>
       </div>
 
