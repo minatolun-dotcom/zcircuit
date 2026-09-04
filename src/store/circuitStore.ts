@@ -16,12 +16,28 @@ import type {
 } from '../types/circuit';
 import { terminalFromHandle } from '../types/circuit';
 import { uid } from '../utils/uid';
+import { parseCircuitDoc, serializeCircuit, STORAGE_KEY } from './serialization';
+
+const HISTORY_LIMIT = 50;
+
+interface Snapshot {
+  nodes: ComponentNode[];
+  edges: WireEdge[];
+}
 
 interface CircuitState {
   nodes: ComponentNode[];
   edges: WireEdge[];
-  /** Transient user-facing message (invalid connection, hint, ...). */
+  /** Transient user-facing message (invalid connection, save/load, ...). */
   notice: string | null;
+
+  // Undo / redo history ------------------------------------------------
+  past: Snapshot[];
+  future: Snapshot[];
+
+  // Simulation state (consumed by the engine from Wave 3 onwards) -------
+  simulationRunning: boolean;
+  simulationSpeed: number;
 
   addComponent: (type: ComponentType, position: { x: number; y: number }) => string;
   onNodesChange: (changes: NodeChange<ComponentNode>[]) => void;
@@ -33,15 +49,43 @@ interface CircuitState {
   deleteEdge: (edgeId: string) => void;
   /** Toggle a wire's selection (React Flow does not manage wire selection itself). */
   selectEdge: (edgeId: string, selected: boolean) => void;
+  /** Called once when a node drag begins, so one undo reverts the whole move. */
+  recordDrag: () => void;
+
+  undo: () => void;
+  redo: () => void;
+
+  /** Start a fresh, empty circuit (clears history). */
+  newCircuit: () => void;
+  /** Serialize the circuit into localStorage. */
+  saveCircuit: () => void;
+  /** Restore the circuit previously saved in localStorage. */
+  loadCircuit: () => void;
+
+  setSimulationRunning: (running: boolean) => void;
+  setSimulationSpeed: (speed: number) => void;
+
   setNotice: (message: string | null) => void;
 }
 
 let noticeTimer: ReturnType<typeof setTimeout> | null = null;
 
+/** Immutable push of the current state onto the undo stack (cap HISTORY_LIMIT). */
+function withHistory(s: CircuitState): Pick<CircuitState, 'past' | 'future'> {
+  return {
+    past: [...s.past.slice(-(HISTORY_LIMIT - 1)), { nodes: s.nodes, edges: s.edges }],
+    future: [],
+  };
+}
+
 export const useCircuitStore = create<CircuitState>()((set, get) => ({
   nodes: [],
   edges: [],
   notice: null,
+  past: [],
+  future: [],
+  simulationRunning: false,
+  simulationSpeed: 1,
 
   setNotice: (message) => {
     if (noticeTimer) clearTimeout(noticeTimer);
@@ -60,30 +104,31 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
       position,
       data: { componentType: type, props: { ...meta.defaultProps, name: '' } },
     };
-    set((s) => ({ nodes: [...s.nodes, node] }));
+    set((s) => ({ ...withHistory(s), nodes: [...s.nodes, node] }));
     return id;
   },
 
   onNodesChange: (changes) => {
-    const removedIds = changes
-      .filter((c) => c.type === 'remove')
-      .map((c) => c.id);
-    // Single-selection discipline: selecting a node clears wire selection.
+    const removedIds = changes.filter((c) => c.type === 'remove').map((c) => c.id);
     const nodeSelected = changes.some((c) => c.type === 'select' && c.selected);
     set((s) => ({
       nodes: applyNodeChanges(changes, s.nodes),
       edges: nodeSelected
         ? s.edges.map((e) => ({ ...e, selected: false }))
         : removedIds.length > 0
-          ? s.edges.filter(
-              (e) => !removedIds.includes(e.source) && !removedIds.includes(e.target),
-            )
+          ? s.edges.filter((e) => !removedIds.includes(e.source) && !removedIds.includes(e.target))
           : s.edges,
+      // Record a single history entry for RF-originated deletions.
+      ...(removedIds.length > 0 ? withHistory(s) : {}),
     }));
   },
 
   onEdgesChange: (changes) => {
-    set((s) => ({ edges: applyEdgeChanges(changes, s.edges) }));
+    const removed = changes.some((c) => c.type === 'remove');
+    set((s) => ({
+      edges: applyEdgeChanges(changes, s.edges),
+      ...(removed ? withHistory(s) : {}),
+    }));
   },
 
   connect: (connection) => {
@@ -124,11 +169,13 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
       selectable: false,
       data: { fromTerminal, toTerminal },
     };
-    set((s) => ({ edges: addEdge(edge, s.edges) as WireEdge[] }));
+    set((s) => ({ ...withHistory(s), edges: addEdge(edge, s.edges) as WireEdge[] }));
     return true;
   },
 
   updateProps: (nodeId, patch) => {
+    // Property edits are deliberately not part of undo history: they are
+    // continuous form input, not discrete circuit actions.
     set((s) => ({
       nodes: s.nodes.map((n) =>
         n.id === nodeId ? { ...n, data: { ...n.data, props: { ...n.data.props, ...patch } } } : n,
@@ -138,13 +185,17 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
 
   deleteNode: (nodeId) => {
     set((s) => ({
+      ...withHistory(s),
       nodes: s.nodes.filter((n) => n.id !== nodeId),
       edges: s.edges.filter((e) => e.source !== nodeId && e.target !== nodeId),
     }));
   },
 
   deleteEdge: (edgeId) => {
-    set((s) => ({ edges: s.edges.filter((e) => e.id !== edgeId) }));
+    set((s) => ({
+      ...withHistory(s),
+      edges: s.edges.filter((e) => e.id !== edgeId),
+    }));
   },
 
   selectEdge: (edgeId, selected) => {
@@ -154,4 +205,75 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
       nodes: selected ? s.nodes.map((n) => ({ ...n, selected: false })) : s.nodes,
     }));
   },
+
+  recordDrag: () => {
+    set((s) => withHistory(s));
+  },
+
+  undo: () => {
+    const s = get();
+    if (s.past.length === 0) return;
+    const previous = s.past[s.past.length - 1];
+    set({
+      nodes: previous.nodes,
+      edges: previous.edges,
+      past: s.past.slice(0, -1),
+      future: [...s.future.slice(-(HISTORY_LIMIT - 1)), { nodes: s.nodes, edges: s.edges }],
+      notice: null,
+    });
+  },
+
+  redo: () => {
+    const s = get();
+    if (s.future.length === 0) return;
+    const next = s.future[s.future.length - 1];
+    set({
+      nodes: next.nodes,
+      edges: next.edges,
+      past: [...s.past.slice(-(HISTORY_LIMIT - 1)), { nodes: s.nodes, edges: s.edges }],
+      future: s.future.slice(0, -1),
+      notice: null,
+    });
+  },
+
+  newCircuit: () => {
+    set({ nodes: [], edges: [], past: [], future: [], notice: null });
+    get().setNotice('New circuit started.');
+  },
+
+  saveCircuit: () => {
+    const doc = serializeCircuit(get().nodes, get().edges);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(doc));
+      get().setNotice('Circuit saved to this browser.');
+    } catch {
+      get().setNotice('Could not save: storage unavailable.');
+    }
+  },
+
+  loadCircuit: () => {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      get().setNotice('No saved circuit found.');
+      return;
+    }
+    const parsed = parseCircuitDoc(raw);
+    if (!parsed.ok) {
+      get().setNotice(parsed.message);
+      return;
+    }
+    set({
+      nodes: parsed.nodes,
+      edges: parsed.edges,
+      past: [],
+      future: [],
+      simulationRunning: false,
+      notice: null,
+    });
+    get().setNotice('Saved circuit loaded.');
+  },
+
+  setSimulationRunning: (running) => set({ simulationRunning: running }),
+  setSimulationSpeed: (speed) =>
+    set({ simulationSpeed: Math.min(8, Math.max(0.1, speed)) }),
 }));

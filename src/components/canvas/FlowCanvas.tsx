@@ -30,6 +30,7 @@ function Canvas() {
   const onEdgesChange = useCircuitStore((s) => s.onEdgesChange);
   const onConnect = useCircuitStore((s) => s.connect);
   const addComponent = useCircuitStore((s) => s.addComponent);
+  const recordDrag = useCircuitStore((s) => s.recordDrag);
   const { screenToFlowPosition } = useReactFlow();
   const [dragOver, setDragOver] = useState(false);
 
@@ -91,6 +92,7 @@ function Canvas() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeDragStart={recordDrag}
         // Loose mode + dual-capable handles makes every terminal usable as
         // both a wire start and a wire end.
         connectionMode={ConnectionMode.Loose}
@@ -100,20 +102,20 @@ function Canvas() {
         deleteKeyCode={['Backspace', 'Delete']}
         connectionLineType={ConnectionLineType.Step}
         snapToGrid
-        snapGrid={[8, 8]}
+        snapGrid={[16, 16]}
         fitView
         fitViewOptions={{ padding: 0.3, maxZoom: 1 }}
         minZoom={0.2}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
-        className={dragOver ? 'bg-sky-50' : ''}
+        className={dragOver ? 'bg-sky-50 dark:bg-slate-800/60' : ''}
       >
-        <Background variant={BackgroundVariant.Lines} gap={16} size={1} color="#cbd5e1" />
+        <Background variant={BackgroundVariant.Lines} gap={16} size={1} />
         <Controls />
-        <MiniMap pannable zoomable nodeColor="#475569" maskColor="rgba(148, 163, 184, 0.15)" />
+        <MiniMap pannable zoomable nodeColor="#475569" maskColor="rgba(100, 116, 139, 0.2)" />
         {nodes.length === 0 && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <p className="max-w-sm text-center text-sm text-slate-400">
+            <p className="max-w-sm text-center text-sm text-slate-400 dark:text-slate-500">
               Drag components from the palette onto the canvas, then connect them{' '}
               <span className="font-medium">terminal to terminal</span> to build a circuit.
             </p>
