@@ -100,10 +100,12 @@ export const CATALOG: Record<ComponentType, ComponentTypeMeta> = {
     defaultProps: { name: '', ways: 2, voltageV: 230 },
     terminals: [
       { id: 'l-in', label: 'L bus in', role: 'L', kind: 'input', x: 0, y: 24 },
+      { id: 'pe-in', label: 'PE bus in', role: 'PE', kind: 'input', x: 0, y: 45 },
       { id: 'n-in', label: 'N bus in', role: 'N', kind: 'input', x: 0, y: 66 },
       { id: 'way-1-l', label: 'Way 1 L', role: 'L', kind: 'output', x: 150, y: 16 },
       { id: 'way-2-l', label: 'Way 2 L', role: 'L', kind: 'output', x: 150, y: 40 },
       { id: 'n-out', label: 'N bus out', role: 'N', kind: 'output', x: 150, y: 66 },
+      { id: 'pe-out', label: 'PE bus out', role: 'PE', kind: 'output', x: 150, y: 80 },
     ],
   },
   socket: {
