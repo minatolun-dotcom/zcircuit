@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { WireEdge } from '../types/circuit';
+import type { ComponentNode, WireEdge } from '../types/circuit';
+import { analyzeCircuit } from '../engine/optimization';
 import { CATEGORIES, LEVELS, levelById, nextLevelId, orderedLevelIds } from './curriculum';
 import { buildStarter } from './starter';
 import { evaluateLevel } from './judge';
@@ -12,11 +13,17 @@ function refWire(id: string, source: string, fromTerminal: string, target: strin
     source,
     target,
     sourceHandle: `${fromTerminal}::src`,
-    targetHandle: `${toTerminal}::tgt`,
+    targetHandle: `${toTerminal}::src`,
     data: { fromTerminal, toTerminal },
   } as unknown as WireEdge;
 }
 
+/**
+ * Reference circuit for a level. `nodes` may differ from the starter in props
+ * (re-rated MCB, re-wattaged lamp) and may add components (an extra MCB) -
+ * what must hold is that every starter node survives with the same id, type
+ * and position (see sameLayout).
+ */
 function referenceFor(levelId: string): { nodes: unknown[]; edges: WireEdge[] } | null {
   switch (levelId) {
     case 'first-circuit.1':
@@ -58,9 +65,214 @@ function referenceFor(levelId: string): { nodes: unknown[]; edges: WireEdge[] } 
           refWire('w7', 'fan', 'n-out', 'sb', 'n-out'),
         ],
       };
+    case 'getting-wired.5':
+      return {
+        nodes: buildStarter(levelById(levelId)!).nodes,
+        edges: [
+          refWire('w1', 'sb', 'way-1-l', 'b1', 'l-in'),
+          refWire('w2', 'b1', 'n-out', 'b2', 'l-in'),
+          refWire('w3', 'b2', 'n-out', 'sb', 'n-out'),
+        ],
+      };
+    case 'getting-wired.6':
+      return {
+        nodes: buildStarter(levelById(levelId)!).nodes,
+        edges: [
+          refWire('w1', 'sb', 'way-1-l', 'b1', 'l-in'),
+          refWire('w2', 'sb', 'way-1-l', 'b2', 'l-in'),
+          refWire('w3', 'b1', 'n-out', 'sb', 'n-out'),
+          refWire('w4', 'b2', 'n-out', 'sb', 'n-out'),
+        ],
+      };
+    case 'getting-wired.7':
+      return {
+        nodes: buildStarter(levelById(levelId)!).nodes,
+        edges: [
+          refWire('w1', 'sb', 'way-1-l', 'mcb', 'l-in'),
+          refWire('w2', 'mcb', 'l-out', 'sw', 'l-in'),
+          refWire('w3', 'sw', 'l-out', 'bulb', 'l-in'),
+          refWire('w4', 'sw', 'l-out', 'fan', 'l-in'),
+          refWire('w5', 'bulb', 'n-out', 'sb', 'n-out'),
+          refWire('w6', 'fan', 'n-out', 'sb', 'n-out'),
+        ],
+      };
+    case 'getting-wired.8':
+      return {
+        nodes: (buildStarter(levelById(levelId)!).nodes as ComponentNode[]).map((n) =>
+          n.id === 'sw1' || n.id === 'sw2' ? { ...n, data: { ...n.data, props: { ...n.data.props, state: 'on' } } } : n,
+        ),
+        edges: [
+          refWire('w1', 'sb', 'way-1-l', 'mcb', 'l-in'),
+          refWire('w2', 'mcb', 'l-out', 'sw1', 'l-in'),
+          refWire('w3', 'mcb', 'l-out', 'sw2', 'l-in'),
+          refWire('w4', 'sw1', 'l-out', 'lamp', 'l-in'),
+          refWire('w5', 'sw2', 'l-out', 'lamp', 'l-in'),
+          refWire('w6', 'lamp', 'n-out', 'sb', 'n-out'),
+        ],
+      };
+    case 'safety-first.9':
+      return {
+        nodes: buildStarter(levelById(levelId)!).nodes,
+        edges: [
+          refWire('w1', 'sb', 'way-1-l', 'lamp', 'l-in'),
+          refWire('w2', 'lamp', 'n-out', 'sb', 'n-out'),
+        ],
+      };
+    case 'safety-first.10':
+      return {
+        nodes: (buildStarter(levelById(levelId)!).nodes as ComponentNode[]).map((n) =>
+          n.id === 'lamp' ? { ...n, data: { ...n.data, props: { ...n.data.props, wattageW: 4000 } } } : n,
+        ),
+        edges: [
+          refWire('w1', 'sb', 'way-1-l', 'mcb', 'l-in'),
+          refWire('w2', 'mcb', 'l-out', 'lamp', 'l-in'),
+          refWire('w3', 'lamp', 'n-out', 'sb', 'n-out'),
+        ],
+      };
+    case 'safety-first.11':
+      return {
+        nodes: (buildStarter(levelById(levelId)!).nodes as ComponentNode[]).map((n) =>
+          n.id === 'mcb' ? { ...n, data: { ...n.data, props: { ...n.data.props, ratedCurrentA: 32 } } } : n,
+        ),
+        edges: [
+          refWire('w1', 'sb', 'way-1-l', 'mcb', 'l-in'),
+          refWire('w2', 'mcb', 'l-out', 'lamp', 'l-in'),
+          refWire('w3', 'lamp', 'n-out', 'sb', 'n-out'),
+        ],
+      };
+    case 'safety-first.12':
+      return {
+        nodes: buildStarter(levelById(levelId)!).nodes,
+        edges: [
+          refWire('w1', 'sb', 'way-1-l', 'mcb', 'l-in'),
+          refWire('w2', 'mcb', 'l-out', 'socket', 'l-in'),
+          refWire('w3', 'socket', 'n-in', 'sb', 'n-out'),
+          refWire('w4', 'socket', 'pe-in', 'sb', 'pe-out'),
+        ],
+      };
+    case 'fault-clinic.13':
+    case 'fault-clinic.14':
+      return {
+        nodes: buildStarter(levelById(levelId)!).nodes,
+        edges: [
+          refWire('w1', 'sb', 'way-1-l', 'mcb', 'l-in'),
+          refWire('w2', 'mcb', 'l-out', 'lamp', 'l-in'),
+          refWire('w3', 'lamp', 'n-out', 'sb', 'n-out'),
+        ],
+      };
+    case 'fault-clinic.15':
+      return {
+        nodes: buildStarter(levelById(levelId)!).nodes,
+        edges: [
+          refWire('w1', 'sb', 'way-1-l', 'mcb', 'l-in'),
+          refWire('w2', 'mcb', 'l-out', 'socket', 'l-in'),
+          refWire('w3', 'socket', 'n-in', 'sb', 'n-out'),
+          refWire('w4', 'socket', 'pe-in', 'sb', 'pe-out'),
+        ],
+      };
+    case 'fault-clinic.16':
+      return {
+        nodes: [
+          ...buildStarter(levelById(levelId)!).nodes,
+          { id: 'mcb2', type: 'component', position: { x: 790, y: 160 }, data: { componentType: 'mcb', props: {} } },
+        ],
+        edges: [
+          refWire('w1', 'sb', 'way-1-l', 'mcb', 'l-in'),
+          refWire('w2', 'mcb', 'l-out', 'lamp1', 'l-in'),
+          refWire('w3', 'lamp1', 'n-out', 'sb', 'n-out'),
+          refWire('w4', 'sb', 'way-2-l', 'mcb2', 'l-in'),
+          refWire('w5', 'mcb2', 'l-out', 'lamp2', 'l-in'),
+          refWire('w6', 'lamp2', 'n-out', 'sb', 'n-out'),
+        ],
+      };
+    case 'master-builder.17':
+      return {
+        nodes: buildStarter(levelById(levelId)!).nodes,
+        edges: [
+          refWire('w1', 'sb', 'way-1-l', 'mcb', 'l-in'),
+          refWire('w2', 'mcb', 'l-out', 'sw', 'l-in'),
+          refWire('w3', 'sw', 'l-out', 'lamp', 'l-in'),
+          refWire('w4', 'lamp', 'n-out', 'sb', 'n-out'),
+        ],
+      };
+    case 'master-builder.18':
+      return {
+        nodes: buildStarter(levelById(levelId)!).nodes,
+        edges: [
+          refWire('w1', 'sb', 'way-1-l', 'mcb', 'l-in'),
+          refWire('w2', 'mcb', 'l-out', 'sw1', 'l-in'),
+          refWire('w3', 'sw1', 'l-out', 'lamp', 'l-in'),
+          refWire('w4', 'lamp', 'n-out', 'sb', 'n-out'),
+          refWire('w5', 'mcb', 'l-out', 'sw2', 'l-in'),
+          refWire('w6', 'sw2', 'l-out', 'fan', 'l-in'),
+          refWire('w7', 'fan', 'n-out', 'sb', 'n-out'),
+        ],
+      };
+    case 'master-builder.19':
+      return {
+        nodes: buildStarter(levelById(levelId)!).nodes,
+        edges: [
+          refWire('w1', 'sb', 'way-1-l', 'mcb', 'l-in'),
+          refWire('w2', 'mcb', 'l-out', 'sw1', 'l-in'),
+          refWire('w3', 'sw1', 'l-out', 'bulb', 'l-in'),
+          refWire('w4', 'bulb', 'n-out', 'sb', 'n-out'),
+          refWire('w5', 'mcb', 'l-out', 'sw2', 'l-in'),
+          refWire('w6', 'sw2', 'l-out', 'fan', 'l-in'),
+          refWire('w7', 'fan', 'n-out', 'sb', 'n-out'),
+          refWire('w8', 'mcb', 'l-out', 'socket', 'l-in'),
+          refWire('w9', 'socket', 'n-in', 'sb', 'n-out'),
+          refWire('w10', 'socket', 'pe-in', 'sb', 'pe-out'),
+        ],
+      };
+    case 'master-builder.20':
+      return {
+        nodes: buildStarter(levelById(levelId)!).nodes,
+        edges: [
+          refWire('w1', 'inv', 'out-l', 'mcb', 'l-in'),
+          refWire('w2', 'mcb', 'l-out', 'bulb', 'l-in'),
+          refWire('w3', 'mcb', 'l-out', 'fan', 'l-in'),
+          refWire('w4', 'bulb', 'n-out', 'inv', 'out-n'),
+          refWire('w5', 'fan', 'n-out', 'inv', 'out-n'),
+        ],
+      };
+    case 'master-builder.21':
+      return {
+        nodes: buildStarter(levelById(levelId)!).nodes,
+        edges: [
+          refWire('w1', 'sb', 'way-1-l', 'mcb', 'l-in'),
+          refWire('w2', 'mcb', 'l-out', 'sw1', 'l-in'),
+          refWire('w3', 'sw1', 'l-out', 'bulb', 'l-in'),
+          refWire('w4', 'bulb', 'n-out', 'sb', 'n-out'),
+          refWire('w5', 'mcb', 'l-out', 'sw2', 'l-in'),
+          refWire('w6', 'sw2', 'l-out', 'fan', 'l-in'),
+          refWire('w7', 'fan', 'n-out', 'sb', 'n-out'),
+          refWire('w8', 'mcb', 'l-out', 'socket1', 'l-in'),
+          refWire('w9', 'socket1', 'l-in', 'socket2', 'l-in'),
+          refWire('w10', 'socket1', 'n-in', 'sb', 'n-out'),
+          refWire('w11', 'socket1', 'pe-in', 'sb', 'pe-out'),
+          refWire('w12', 'socket2', 'n-in', 'sb', 'n-out'),
+          refWire('w13', 'socket2', 'pe-in', 'sb', 'pe-out'),
+        ],
+      };
     default:
       return null;
   }
+}
+
+/**
+ * The reference must keep every starter component at its id/type/position;
+ * props may differ (re-rating) and extra components may be added (an MCB for
+ * the overload fix).
+ */
+function sameLayout(starterNodes: unknown[], refNodes: unknown[]): boolean {
+  const byId = new Map((refNodes as { id: string }[]).map((n) => [n.id, n]));
+  for (const s of starterNodes as { id: string; type: string; position: { x: number; y: number } }[]) {
+    const r = byId.get(s.id) as { type?: string; position?: { x: number; y: number } } | undefined;
+    if (!r || r.type !== s.type || r.position?.x !== s.position.x || r.position?.y !== s.position.y) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /** Collect every nodeId a level's objectives reference (recursively). */
@@ -146,6 +358,10 @@ describe('curriculum structure', () => {
     expect(chain).toHaveLength(LEVELS.length);
     expect(nextLevelId(chain[chain.length - 1])).toBeUndefined();
   });
+
+  it('max stars is 63 across the 21-level curriculum', () => {
+    expect(orderedLevelIds()).toHaveLength(21);
+  });
 });
 
 describe('level solvability (reference solutions)', () => {
@@ -155,10 +371,24 @@ describe('level solvability (reference solutions)', () => {
       expect(ref, `reference solution for ${level.id}`).not.toBeNull();
       const starter = buildStarter(level);
       const { nodes, edges } = referenceFor(level.id)!;
-      expect(nodes).toEqual(starter.nodes); // reference keeps the starter intact
+      expect(sameLayout(starter.nodes, nodes), `reference keeps the starter layout for ${level.id}`).toBe(true);
+
       const r = evaluateLevel(nodes as never, edges, level);
-      expect(r.passed, `objectives: ${JSON.stringify(r.objectives.map((o) => o.detail))}`).toBe(true);
-      expect(r.stars, `stars for ${level.id}`).toBe(3);
+      // For tuning: when a reference misses, surface exactly which objectives,
+      // star checks and optimization suggestions (crossings etc.) failed.
+      const optimization = analyzeCircuit(nodes as ComponentNode[], edges);
+      const debug = [
+        r.passed ? '' : `objectives: ${JSON.stringify(r.objectives.map((o) => `${o.pass ? 'OK' : 'FAIL'} ${o.detail}`))}`,
+        r.stars < 3 ? `starChecks: ${JSON.stringify(r.starChecks)}` : '',
+        optimization.suggestions.length > 0
+          ? `suggestions: ${JSON.stringify(optimization.suggestions.map((s) => `${s.code} ${s.title} :: ${s.detail}`))}`
+          : '',
+        `totalWirePx: ${optimization.metrics.totalWirePx}`,
+      ]
+        .filter(Boolean)
+        .join(' | ');
+      expect(r.passed, `objectives for ${level.id}: ${debug}`).toBe(true);
+      expect(r.stars, `stars for ${level.id}: ${debug}`).toBe(3);
     });
   }
 });
