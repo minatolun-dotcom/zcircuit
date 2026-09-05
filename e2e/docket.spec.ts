@@ -1,4 +1,5 @@
 import { expect, test, type Download, type Page } from '@playwright/test';
+import { openPlayground } from './helpers';
 
 async function dropComponent(page: Page, testId: string, x: number, y: number) {
   const item = page.getByTestId(`palette-item-${testId}`);
@@ -38,7 +39,7 @@ async function readDownload(download: Download) {
 }
 
 test('exports the circuit as JSON with full state and results', async ({ page }) => {
-  await page.goto('/');
+  await openPlayground(page);
   await buildLampCircuit(page);
 
   const [download] = await Promise.all([
@@ -57,7 +58,7 @@ test('exports the circuit as JSON with full state and results', async ({ page })
 });
 
 test('exports a valid SVG wiring diagram', async ({ page }) => {
-  await page.goto('/');
+  await openPlayground(page);
   await buildLampCircuit(page);
 
   const [download] = await Promise.all([
@@ -74,7 +75,7 @@ test('exports a valid SVG wiring diagram', async ({ page }) => {
 });
 
 test('generates a PDF wiring report', async ({ page }) => {
-  await page.goto('/');
+  await openPlayground(page);
   await buildLampCircuit(page);
 
   const [download] = await Promise.all([

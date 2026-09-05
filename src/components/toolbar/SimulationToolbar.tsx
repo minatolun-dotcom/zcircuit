@@ -21,11 +21,12 @@ function CountBadge({ errors, warnings, label }: { errors: number; warnings: num
 }
 
 /**
- * Bottom toolbar: simulation transport (play/pause, speed) plus the analysis
- * and canvas toggles. Results appear on the canvas (readouts, highlighting)
- * and in the AnalysisRail overlay; the status line shows the solver summary.
+ * Bottom toolbar. In the Playground it offers the simulation transport plus the
+ * analysis/canvas toggles; inside a lesson (variant="lesson") the toggles are
+ * hidden (they would spoil answers) and only Run/Pause + speed remain.
  */
-export function SimulationToolbar() {
+export function SimulationToolbar({ variant = 'full' }: { variant?: 'full' | 'lesson' }) {
+  const lesson = variant === 'lesson';
   const running = useCircuitStore((s) => s.simulationRunning);
   const speed = useCircuitStore((s) => s.simulationSpeed);
   const setRunning = useCircuitStore((s) => s.setSimulationRunning);
@@ -95,53 +96,57 @@ export function SimulationToolbar() {
 
       <span aria-hidden="true" className="h-5 w-px bg-slate-200 dark:bg-slate-700" />
 
-      <div className="flex items-center gap-1.5">
-        <button
-          type="button"
-          data-testid="validation-toggle"
-          onClick={toggleValidation}
-          title="Check the circuit for wiring faults"
-          className={toggleCls(validationEnabled)}
-        >
-          Validation
-          <CountBadge errors={validationErrors} warnings={validationWarnings} label="validation" />
-        </button>
-        <button
-          type="button"
-          data-testid="optimization-toggle"
-          onClick={toggleOptimization}
-          title="Show wiring and conductor-size suggestions"
-          className={toggleCls(optimizationEnabled)}
-        >
-          Optimize
-          <span
-            data-testid="optimization-count"
-            className="rounded-full bg-slate-200 px-1.5 py-px text-[10px] font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-200"
+      {!lesson && (
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            data-testid="validation-toggle"
+            onClick={toggleValidation}
+            title="Check the circuit for wiring faults"
+            className={toggleCls(validationEnabled)}
           >
-            {optimizationCount}
-          </span>
-        </button>
-        <button
-          type="button"
-          data-testid="grid-toggle"
-          onClick={toggleGrid}
-          title={gridVisible ? 'Hide the routing grid' : 'Show the routing grid'}
-          className={toggleCls(gridVisible)}
-        >
-          Grid
-        </button>
-        <button
-          type="button"
-          data-testid="waveform-toggle"
-          onClick={toggleWaveform}
-          title="Show the oscilloscope waveform drawer"
-          className={toggleCls(waveformOpen)}
-        >
-          Scope
-        </button>
-      </div>
+            Validation
+            <CountBadge errors={validationErrors} warnings={validationWarnings} label="validation" />
+          </button>
+          <button
+            type="button"
+            data-testid="optimization-toggle"
+            onClick={toggleOptimization}
+            title="Show wiring and conductor-size suggestions"
+            className={toggleCls(optimizationEnabled)}
+          >
+            Optimize
+            <span
+              data-testid="optimization-count"
+              className="rounded-full bg-slate-200 px-1.5 py-px text-[10px] font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-200"
+            >
+              {optimizationCount}
+            </span>
+          </button>
+          <button
+            type="button"
+            data-testid="grid-toggle"
+            onClick={toggleGrid}
+            title={gridVisible ? 'Hide the routing grid' : 'Show the routing grid'}
+            className={toggleCls(gridVisible)}
+          >
+            Grid
+          </button>
+          <button
+            type="button"
+            data-testid="waveform-toggle"
+            onClick={toggleWaveform}
+            title="Show the oscilloscope waveform drawer"
+            className={toggleCls(waveformOpen)}
+          >
+            Scope
+          </button>
+        </div>
+      )}
 
-      <span aria-hidden="true" className="hidden h-5 w-px bg-slate-200 sm:block dark:bg-slate-700" />
+      {!lesson && (
+        <span aria-hidden="true" className="hidden h-5 w-px bg-slate-200 sm:block dark:bg-slate-700" />
+      )}
 
       <p
         data-testid="sim-status"

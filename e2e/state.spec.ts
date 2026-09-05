@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { openPlayground } from './helpers';
 
 async function dropComponent(page: Page, testId: string, x: number, y: number) {
   const item = page.getByTestId(`palette-item-${testId}`);
@@ -15,7 +16,7 @@ async function connectLtoL(page: Page, fromType: string, toType: string) {
 }
 
 test('undo and redo step through discrete circuit actions', async ({ page }) => {
-  await page.goto('/');
+  await openPlayground(page);
 
   await dropComponent(page, 'mcb', 280, 200);
   await dropComponent(page, 'bulb', 760, 200);
@@ -43,7 +44,7 @@ test('undo and redo step through discrete circuit actions', async ({ page }) => 
 });
 
 test('saved circuit survives a page reload', async ({ page }) => {
-  await page.goto('/');
+  await openPlayground(page);
 
   await dropComponent(page, 'switch', 280, 200);
   await dropComponent(page, 'fan', 720, 200);

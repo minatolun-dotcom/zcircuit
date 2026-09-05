@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { openPlayground } from './helpers';
 
 async function dropComponent(page: Page, testId: string, x: number, y: number) {
   const item = page.getByTestId(`palette-item-${testId}`);
@@ -34,7 +35,7 @@ async function buildLampCircuit(page: Page) {
 }
 
 test('running the simulation powers the lamp and shows live readouts', async ({ page }) => {
-  await page.goto('/');
+  await openPlayground(page);
   await buildLampCircuit(page);
 
   // Speed control works before running.
@@ -57,7 +58,7 @@ test('running the simulation powers the lamp and shows live readouts', async ({ 
 });
 
 test('validation flags a healthy circuit as clean and a short circuit in red', async ({ page }) => {
-  await page.goto('/');
+  await openPlayground(page);
 
   // Healthy circuit -> no problems.
   await buildLampCircuit(page);
@@ -90,7 +91,7 @@ test('validation flags a healthy circuit as clean and a short circuit in red', a
 });
 
 test('optimization panel lists conductor and layout suggestions', async ({ page }) => {
-  await page.goto('/');
+  await openPlayground(page);
   await buildLampCircuit(page);
 
   await page.getByTestId('optimization-toggle').click();

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { openPlayground } from './helpers';
 
 async function dropComponent(page: Page, testId: string, x: number, y: number) {
   const item = page.getByTestId(`palette-item-${testId}`);
@@ -7,7 +8,7 @@ async function dropComponent(page: Page, testId: string, x: number, y: number) {
 }
 
 test('app shell loads the canvas and full palette', async ({ page }) => {
-  await page.goto('/');
+  await openPlayground(page);
   await expect(page.getByTestId('app-header')).toBeVisible();
   await expect(page.getByTestId('wiring-canvas')).toBeVisible();
   await expect(page.getByTestId('component-palette')).toBeVisible();
@@ -23,7 +24,7 @@ test('app shell loads the canvas and full palette', async ({ page }) => {
 test('drag MCB and bulb onto the canvas, wire them, then delete the wire and node', async ({
   page,
 }) => {
-  await page.goto('/');
+  await openPlayground(page);
 
   await dropComponent(page, 'mcb', 320, 260);
   await dropComponent(page, 'bulb', 700, 260);

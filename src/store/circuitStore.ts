@@ -71,6 +71,8 @@ interface CircuitState {
 
   /** Start a fresh, empty circuit (clears history). */
   newCircuit: () => void;
+  /** Replace the whole circuit (levels load their starters through this). */
+  importCircuit: (nodes: ComponentNode[], edges: WireEdge[]) => void;
   /** Serialize the circuit into localStorage. */
   saveCircuit: () => void;
   /** Restore the circuit previously saved in localStorage. */
@@ -289,6 +291,20 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
     }
   },
 
+  importCircuit: (nodes, edges) => {
+    set({
+      nodes,
+      edges,
+      past: [],
+      future: [],
+      simulationRunning: false,
+      simResult: null,
+      validation: null,
+      optimization: null,
+      notice: null,
+    });
+  },
+
   loadCircuit: () => {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
@@ -300,17 +316,7 @@ export const useCircuitStore = create<CircuitState>()((set, get) => ({
       get().setNotice(parsed.message);
       return;
     }
-    set({
-      nodes: parsed.nodes,
-      edges: parsed.edges,
-      past: [],
-      future: [],
-      simulationRunning: false,
-      simResult: null,
-      validation: null,
-      optimization: null,
-      notice: null,
-    });
+    get().importCircuit(parsed.nodes, parsed.edges);
     get().setNotice('Saved circuit loaded.');
   },
 

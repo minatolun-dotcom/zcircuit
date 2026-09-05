@@ -319,3 +319,146 @@ pnpm exec playwright install chromium
 *Plan v2 (reviewed 2026-09-04): fixed the DC-vs-AC modeling contradiction (added "Simulation & component modeling conventions"), corrected dependency-matrix/blocking errors (todos 3/6/8), removed dead references (@skillpet/circuit, DeepCircuits, FlowForge, Utilix), switched gauge selection from AWG to IEC 60228 mm², unified on pnpm, added missing dependencies (Tailwind v4 Vite plugin, jsdom + Testing Library, @types/d3, jspdf, Playwright chromium), added git-init step, and corrected commit-branch naming. Reviewed and updated in place; NOT yet executed.*
 
 *Plan v2.1 (2026-09-04): phasor-domain AC analysis explicitly reconsidered and rejected for v1 - RMS-equivalent is exact for the resistive models in scope, so a complex solver would add complexity with zero user-visible difference. Added a Decision record and an upgrade seam (magnitude-based results contract, unified load-stamp interface, isolated solver core) to the Modeling conventions so a complex solver can be swapped in later if motor reactance / power factor become teaching goals. NOT yet executed.*
+
+---
+
+# Part 2 — Guided Lessons Game Mode (the app's new main function)
+
+> **Product decision (2026-09-04):** the app's main function becomes a fun, intuitive, well-designed **game of guided lessons**. The current free-build editor is renamed **Playground** and stays fully functional (always accessible). Part 1 (Todos 1–11) is the Playground's engine; Part 2 layers a lesson game on top of it, reusing the same canvas, palette, and pure engines (simulation / validation / optimization). NOT yet executed — plan only.
+
+## TL;DR
+
+- App boots into **Lessons** (game) as the default landing. Home screen offers two big cards: **Lessons** (continue) and **Playground** (free build, always unlocked).
+- Lessons = a curated, linear curriculum of **5 categories → 21 levels**, each with its own **objectives** (checked live by the existing engines), **progressive hints** (using hints caps stars at 2), and a **1–3 star** rating with a **par** (efficiency budget).
+- Meta layer: stars accumulate into a **rank ladder** (Apprentice → Master) and unlock **badges** for special feats. Progress persists in localStorage.
+- Levels get progressively harder: beginner basics → wiring topology → safety/earthing → fault-finding → efficiency challenges.
+- New dependencies: **none**. Confetti/celebrations are CSS-only; all judging reuses the pure engines.
+
+## Product decisions (confirmed by user)
+
+1. **Playground access:** free always — both modes available from the home screen; the game is just the default landing.
+2. **Progression:** strictly linear chain — level N+1 unlocks when level N earns ≥1 star; the next category unlocks when its predecessor's last level is completed.
+3. **Rewards:** stars + rank titles + badges.
+
+## The game loop (per level)
+
+1. **Level intro card** — story/context line, the objective list, difficulty dots, and a 💡 hint button.
+2. Canvas preloads the level's **starter circuit** (or empty canvas for build-from-scratch levels).
+3. Player builds/wires with the exact same palette + canvas as Playground. The pure engines recompute live; a **level judge** re-evaluates objectives on every change (no "Submit" step — feedback is instant).
+4. **Level HUD** (bottom/right) — live objective checklist with ✓/✗ animations, hint reveal, Restart, Exit.
+5. All objectives green → **Level Complete modal**: star reveal (1–3), rank-progress bar, badges earned, Next Level / Replay / Menu.
+6. Progress auto-saved to localStorage (`zcircuit.progress`).
+
+## Objective grammar (typed, judgeable by existing engines)
+
+```ts
+type Objective =
+  | { kind: 'powered'; nodeId: string }               // sim status === 'on'
+  | { kind: 'off'; nodeId: string }                   // sim status === 'off' (fault-fix levels)
+  | { kind: 'tripped'; nodeId: string }               // that MCB tripped on overload
+  | { kind: 'noTrips' }                               // no breaker tripped
+  | { kind: 'energized'; nodeId: string }             // socket energized (L-N loop live)
+  | { kind: 'wired'; from: string; to: string }       // a wire exists between two components
+  | { kind: 'noFindings'; severity?: 'error' | 'warning' } // validation report clean at that level
+  | { kind: 'currentUnder'; nodeId: string; maxA: number }
+  | { kind: 'wireLengthUnder'; maxPx: number }        // total routed wire length budget
+  | { kind: 'gaugeAtLeast'; nodeId: string; sizeMm2: number } // IEC 60228 size from optimizer
+  | { kind: 'componentCount'; atLeast?: number; exact?: number }
+  | { kind: 'switchControls'; loadNodeId: string }    // load's live path passes a conducting switch
+  | { kind: 'warningsUnder'; max: number }            // optimization warnings (crossings, overload, ...)
+  | { kind: 'all'; items: Objective[] }               // compound: every item must pass
+  | { kind: 'any'; items: Objective[] }               // compound: at least one passes
+```
+
+**Judge:** pure `evaluateLevel(nodes, edges, reports, level) → { objectives: {ref, pass}[], passed, stars }` in `src/lessons/judge.ts`. Robust to deleted starter nodes (a missing nodeId fails that objective with a "component removed — restart level" hint, never throws).
+
+**Star logic (uniform):**
+- ★ 1 — all objectives pass.
+- ★★ 2 — all objectives pass AND zero validation errors.
+- ★★★ 3 — ★★ AND par met: no hints used AND total routed wire length ≤ level budget AND optimization warnings ≤ level allowance (budgets declared per level, defaulting to generous values).
+
+## Curriculum (v1 content pack: 5 categories, 21 levels)
+
+| # | Level | Objectives (abridged) | Teaches |
+|---|-------|----------------------|---------|
+| **⚡ First Circuit** (Beginner) |||
+| 1 | Make it glow | powered(bulb) | the L→load→N loop |
+| 2 | Shut it off | switchControls(bulb) | a switch on the live conductor |
+| 3 | Safe power | componentCount(mcb≥1) · noTrips · powered | overcurrent protection |
+| 4 | Two rooms | powered(bulb,fan) · switchControls(both) · noTrips | one protected branch, two loads |
+| **🔌 Getting Wired** (Beginner) |||
+| 5 | Series of events | powered(both bulbs) | series topology |
+| 6 | Parallel world | powered(both bulbs) · wireLengthUnder | parallel topology + economy |
+| 7 | Fan & light | powered(both) · switchControls(both) | independent control |
+| 8 | Second way | powered(both) · noTrips | a second switchboard way + own MCB |
+| **🛡️ Safety First** (Intermediate) |||
+| 9 | Don't short it | noFindings(error) · powered · noTrips | find & remove a planted L–N short |
+| 10 | Breaker logic | tripped(mcb) | watch the MCB trip on a 2 kW overload |
+| 11 | Sizing up | gaugeAtLeast(mcb, 4 mm²) · noTrips | IEC 60228 sizing (25 A → 4 mm²) |
+| 12 | Earth it | energized(socket) · noFindings | protective earth continuity |
+| **🔧 Fault Clinic** (Advanced) |||
+| 13 | The dark room | powered · noFindings | find & fix a planted floating wire |
+| 14 | Tripping nuisance | noTrips · powered | find & fix a planted short |
+| 15 | Hot socket | energized · noFindings | earth a planted unearthed socket |
+| 16 | Overloaded | noTrips · powered(both) · noFindings | split a 90%-loaded branch |
+| **🏆 Master Builder** (Advanced, par-driven) |||
+| 17 | Shortest path | powered(both) · wireLengthUnder | layout economy |
+| 18 | No crossings | powered(both) · warningsUnder(0) | clean topology |
+| 19 | The whole house | powered · energized · noFindings · noTrips | full protected + earthed install |
+| 20 | Inverter backup | powered(bulb) via live inverter | inverter as a source |
+| 21 | Grand design (finale) | two protected branches, switch+light each, earthed socket, no errors/trips, wire + crossing budget | everything combined |
+
+**Badges (v1):** 🐣 Sparky — finish First Circuit · 🧼 Clean hands — finish any Fault Clinic level without hints · 💯 Perfectionist — 3-star an entire category · 🏠 Full house — 3-star Grand design · 👑 Master electrician — 3-star every level.
+
+**Ranks (total stars, 63 max):** 0–9 Apprentice · 10–19 Helper · 20–29 Journeyman · 30–39 Electrician · 40–49 Lead · 50–63 Master.
+
+## Architecture (fits existing conventions)
+
+New modules (all client-side, no new deps):
+
+- `src/lessons/types.ts` — Objective, LevelDef, CategoryDef, ProgressState, LevelResult, rank/badge definitions.
+- `src/lessons/curriculum.ts` — the 5 categories + 21 levels as **typed data** (content = data; more levels = more entries). Each LevelDef stores its starter circuit in the existing `serializeCircuit` JSON format.
+- `src/lessons/starter.ts` — `buildStarter(level) → { nodes, edges }` via the existing `parseCircuit` validator.
+- `src/lessons/judge.ts` — pure `evaluateLevel(...)` + star/par logic (unit-tested like the other engines).
+- `src/store/gameStore.ts` — mode (`'lessons' | 'playground'`), activeLevelId, hintsUsed, progress (localStorage), actions: startLevel / completeLevel (computes stars, unlocks next, awards badges) / quitLevel / revealHint / setMode. Circuit state stays in `circuitStore`; starting a level loads its starter into it.
+- `src/components/game/` — `HomeScreen` (Lessons + Playground cards), `LevelSelect` (category cards → level grid with stars/locks/difficulty), `LevelHUD` (live objective checklist + hints + restart/exit), `LevelCompleteModal` (CSS confetti star reveal + rank progress + badges), header mode tabs + rank bar.
+- `src/hooks/useLevelJudge.ts` — memoized live evaluation on (nodes, edges, reports), same pattern as `useLiveAnalyses` (engines always on inside a level).
+
+**Canvas inside a lesson:** same `FlowCanvas` + `Palette` (+ PropertiesPanel — some levels require re-rating an MCB). The SimulationToolbar shrinks to Run/Pause/Speed only inside lessons; Validation/Optimize/Scope toggles, Save/Open and Export are hidden (they'd spoil answers or are irrelevant). Undo/Redo stay (practice-friendly); Restart resets to the starter and clears history; Exit warns before discarding unsaved in-level work (completed stars are already persisted). Playground keeps the complete existing toolbar untouched.
+
+## Testing
+
+**Unit (Vitest):**
+- `judge.test.ts` — every objective kind + compound all/any; star par logic (hint cap, wire budget, warning allowance); missing-node robustness (no throw).
+- `curriculum.test.ts` — unique ids; linear-unlock chain consistency; every objective's nodeId exists in its level's starter; every level is **solvable** (a reference solution built with starter helpers passes all objectives); badge/rank definitions sane.
+- `starter.test.ts` — buildStarter round-trips through parseCircuit.
+- `gameStore.test.ts` — progress persistence, unlock chain, star computation, badge awards, hint cap.
+
+**E2E (Playwright):**
+- Home shows Lessons + Playground; Playground opens the full editor.
+- L1 flow: open level → objectives listed → build bulb circuit → checklist greens → complete modal + stars → next level unlocked.
+- Hints reveal 1→2→3 progressively; using one caps stars at 2.
+- Fault level: planted short flagged → fix → complete.
+- Progress persists across reload; badge awarded on category completion.
+- Playground regression: all 12 existing E2E specs keep passing.
+
+## Execution waves (Part 2)
+
+| Wave | Branch | Contents | Commit |
+|------|--------|----------|--------|
+| G1 | `wave-g1-lessons-core` | types.ts, judge.ts, starter.ts, curriculum.ts (Category 1: L1–L4) + judge/curriculum/starter unit tests | `feat(lessons): level judge and curriculum framework` |
+| G2 | `wave-g2-game-ui` | gameStore, HomeScreen, LevelSelect, LevelHUD, LevelCompleteModal, header tabs/rank bar, App integration; L1–L4 playable; store tests + first game E2E | `feat(game): lesson game shell and first levels` |
+| G3 | `wave-g3-content` | Categories 2–5 (L5–L21) + per-level reference-solution tests + fault-level E2E | `feat(lessons): full curriculum content pack` |
+| G4 | `wave-g4-polish` | badges + rank UI, confetti, level-intro cards, difficulty dots, shortcuts, full E2E + coverage, final verification (F1–F4 style) | `feat(game): polish, badges and final verification` |
+
+Each wave gates on `tsc --noEmit` + `vitest run` + `eslint` + `playwright test` (full suite incl. playground regression) + `vite build`. Merge each wave to main, then push and rebuild the Docker preview once G4 lands.
+
+## Success criteria (Part 2)
+
+- App boots into Lessons; Playground is one click away and fully intact.
+- 21 levels across 5 categories playable end-to-end: objectives, hints, stars, ranks, badges, linear unlocks, persisted progress.
+- Every level's objectives are machine-checkable by the existing pure engines — no new simulation work.
+- All existing Playground features and its 12 E2E specs keep passing.
+- New unit + E2E suites green; pushed; Docker preview rebuilt.
+
+*Plan Part 2 (2026-09-04): designed on top of the shipped Part 1 architecture; user confirmed Playground always free, linear unlock chain, stars + ranks + badges. NOT yet executed.*

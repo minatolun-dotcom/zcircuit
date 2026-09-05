@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { openPlayground } from './helpers';
 
 async function dropComponent(page: Page, testId: string, x: number, y: number) {
   const item = page.getByTestId(`palette-item-${testId}`);
@@ -32,7 +33,7 @@ async function buildLampCircuit(page: Page) {
 }
 
 test('oscilloscope synthesizes the waveform while running and pauses with it', async ({ page }) => {
-  await page.goto('/');
+  await openPlayground(page);
   await buildLampCircuit(page);
 
   // Open the scope: paused -> placeholder, no waveform rendered.
@@ -59,7 +60,7 @@ test('oscilloscope synthesizes the waveform while running and pauses with it', a
 });
 
 test('time-axis zoom changes the visible window', async ({ page }) => {
-  await page.goto('/');
+  await openPlayground(page);
   await buildLampCircuit(page);
 
   await page.getByTestId('waveform-toggle').click();
