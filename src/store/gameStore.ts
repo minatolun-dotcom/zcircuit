@@ -38,6 +38,8 @@ interface GameStoreState extends SavedProgress {
   hintsUsed: number;
   /** Bumped on every start/restart so one-shot completions never re-fire. */
   attempt: number;
+  /** Intro card shown when a level starts (dismissed per level; restart keeps it dismissed). */
+  showIntro: boolean;
   /** Latest judge evaluation of the active level (null outside a level). */
   levelResult: LevelResult | null;
   /** Completion payload shown in the modal; null = no modal. */
@@ -57,6 +59,7 @@ interface GameStoreState extends SavedProgress {
   restartLevel: () => void;
   quitLevel: () => void;
   revealHint: () => void;
+  dismissIntro: () => void;
   setLevelResult: (result: LevelResult) => void;
   completeLevel: (result: LevelResult) => void;
   dismissCompletion: () => void;
@@ -176,6 +179,7 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
   activeLevelId: null,
   hintsUsed: 0,
   attempt: 0,
+  showIntro: false,
   levelResult: null,
   completion: null,
   playgroundBackup: null,
@@ -219,6 +223,7 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
       activeLevelId: levelId,
       hintsUsed: 0,
       attempt: get().attempt + 1,
+      showIntro: true,
       levelResult: null,
       completion: null,
     });
@@ -249,6 +254,7 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
     set({
       activeLevelId: null,
       hintsUsed: 0,
+      showIntro: false,
       levelResult: null,
       completion: null,
       playgroundBackup: null,
@@ -260,6 +266,8 @@ export const useGameStore = create<GameStoreState>()((set, get) => ({
     if (!level) return;
     set({ hintsUsed: Math.min(get().hintsUsed + 1, level.hints.length) });
   },
+
+  dismissIntro: () => set({ showIntro: false }),
 
   setLevelResult: (result) => set({ levelResult: result }),
 

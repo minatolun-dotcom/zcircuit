@@ -29,6 +29,9 @@ async function openLevelOne(page: Page) {
   await page.getByTestId('level-card-first-circuit.1').click();
   await expect(page.getByTestId('level-hud')).toBeVisible();
   await expect(page.getByTestId('level-title')).toContainText('Make it glow');
+  // The level intro card briefs the mission; dismiss it to reach the canvas.
+  await page.getByTestId('intro-start-btn').click();
+  await expect(page.getByTestId('level-intro-modal')).not.toBeVisible();
 }
 
 test('app boots to the lessons home with both modes reachable', async ({ page }) => {

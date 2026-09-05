@@ -28,6 +28,8 @@ async function openLevel(page: Page, levelId: string): Promise<void> {
   await expect(page.getByTestId('level-select')).toBeVisible();
   await page.getByTestId(`level-card-${levelId}`).click();
   await expect(page.getByTestId('level-hud')).toBeVisible();
+  await page.getByTestId('intro-start-btn').click();
+  await expect(page.getByTestId('level-intro-modal')).not.toBeVisible();
 }
 
 /**

@@ -29,6 +29,7 @@ function reset() {
     activeLevelId: null,
     hintsUsed: 0,
     attempt: 0,
+    showIntro: false,
     levelResult: null,
     completion: null,
     playgroundBackup: null,
@@ -102,6 +103,24 @@ describe('game store: level lifecycle', () => {
     expect(s.hintsUsed).toBe(0);
     expect(s.attempt).toBe(2);
     expect(useCircuitStore.getState().nodes).toHaveLength(2);
+  });
+
+  it('the intro card shows on start and stays dismissed across restarts', () => {
+    useGameStore.getState().startLevel('first-circuit.1');
+    expect(useGameStore.getState().showIntro).toBe(true);
+    useGameStore.getState().dismissIntro();
+    expect(useGameStore.getState().showIntro).toBe(false);
+    useGameStore.getState().restartLevel();
+    expect(useGameStore.getState().showIntro).toBe(false); // no re-brief on retry
+  });
+
+  it('advancing to the next level re-shows the intro card', () => {
+    useGameStore.getState().startLevel('first-circuit.1');
+    useGameStore.getState().dismissIntro();
+    useGameStore.getState().completeLevel(result('first-circuit.1', 1));
+    useGameStore.getState().nextFromCompletion();
+    expect(useGameStore.getState().activeLevelId).toBe('first-circuit.2');
+    expect(useGameStore.getState().showIntro).toBe(true);
   });
 
   it('quitLevel restores the pre-level circuit', () => {
